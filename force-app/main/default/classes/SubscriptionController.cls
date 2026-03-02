@@ -3,11 +3,6 @@ public with sharing class SubscriptionController {
     @AuraEnabled(cacheable=true)
     public static List<Subscription__c> getSubscriptions(Id accountId) {
 
-    
-        // if (!Schema.sObjectType.Subscription__c.isAccessible()) {
-        //     throw new AuraHandledException('Access denied to Subscription');
-        // }
-
         return [
             SELECT Id, Name, Status__c, Monthly_Amount__c
             FROM Subscription__c
@@ -19,9 +14,6 @@ public with sharing class SubscriptionController {
 
    @AuraEnabled(cacheable=true)
     public static Decimal getTotalMRR(Id accountId) {
-        if (!Schema.sObjectType.Subscription__c.isAccessible()) {
-            throw new AuraHandledException('Access denied to Subscription');
-        }
 
         AggregateResult result = [
             SELECT SUM(Monthly_Amount__c) total

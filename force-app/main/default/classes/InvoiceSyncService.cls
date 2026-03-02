@@ -21,8 +21,6 @@ public with sharing class InvoiceSyncService {
             + sub.External_Id__c;
 
         HttpRequest req = new HttpRequest();
-        
-        //req.setEndpoint('https://0b0d69bb-8db4-479f-9516-006688c3e651.mock.pstmn.io/invoices?subscriptionExternalId=' + sub.External_Id__c);
         req.setEndpoint(endpoint);
         req.setMethod('GET');
         req.setHeader('Content-Type','application/json');
