@@ -36,24 +36,26 @@ export default class SubscriptionDashboard extends LightningElement {
 
     @wire(getSubscriptions, { accountId: '$recordId' })
     wiredSubscriptions({ data, error }) {
-
         this.isLoading = false;
-
         if (data) {
             this.subscriptions = data;
             this.error = undefined;
         } else if (error) {
-            this.error = error;
+            this.error = error?.body?.message || 'An error occurred while fetching subscriptions';
             this.subscriptions = undefined;
         }
     }
 
     @wire(getTotalMRR, { accountId: '$recordId' })
-    wiredMRR({ data, error }) {
+    wiredTotalMRR({ data, error }) {
         if (data) {
-            this.totalMRR = data;
+            this.totalMRR = data; 
+        } else if (error) {
+            this.error = error?.body?.message || 'An error occurred while fetching total MRR';
+            this.totalMRR = 0;
         }
     }
+
     get displayMRR() {
     return this.totalMRR != null ? this.totalMRR : 0;
 }
@@ -65,6 +67,7 @@ export default class SubscriptionDashboard extends LightningElement {
         publish(this.messageContext, SUBSCRIPTION_CHANNEL, {
             subscriptionId: rowId
         });
+        console.log('Subscription ID sent: ' + rowId);
     }
 
     get hasSubscriptions() {

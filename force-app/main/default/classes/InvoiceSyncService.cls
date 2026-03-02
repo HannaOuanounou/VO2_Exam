@@ -1,32 +1,55 @@
 public with sharing class InvoiceSyncService {
 
+
+    @AuraEnabled
     public static void syncInvoices(Id subscriptionId) {
+        System.debug('syncInvoices called for subscriptionId: ' + subscriptionId);
         Subscription__c sub = [SELECT Id, External_Id__c FROM Subscription__c WHERE Id = :subscriptionId LIMIT 1];
 
         if(String.isBlank(sub.External_Id__c)) {
             System.debug('Subscription has no External_Id__c.');
             return;
         }
+        
+        System.debug('Subscription External_Id__c: ' + sub.External_Id__c);
+
+        
+       Invoice_Config__mdt config = Invoice_Config__mdt.getInstance('Default');
+
+        String endpoint = config.Base_Url__c 
+            + '?subscriptionExternalId=' 
+            + sub.External_Id__c;
 
         HttpRequest req = new HttpRequest();
-        req.setEndpoint('callout:InvoiceCallout/invoices?subscriptionExternalId=' 
-                        + EncodingUtil.urlEncode(sub.External_Id__c,'UTF-8'));
+        
+        //req.setEndpoint('https://0b0d69bb-8db4-479f-9516-006688c3e651.mock.pstmn.io/invoices?subscriptionExternalId=' + sub.External_Id__c);
+        req.setEndpoint(endpoint);
         req.setMethod('GET');
         req.setHeader('Content-Type','application/json');
+        req.setHeader('Accept', 'application/json');
+        req.setTimeout(30000);
 
         Http http = new Http();
         try {
             HttpResponse res = http.send(req);
+
+            System.debug('API Response Status Code: ' + res.getStatusCode());
+
             if(res.getStatusCode() != 200){
                 System.debug('API returned an error status : ' + res.getStatusCode());
+                System.debug('API Response Body: ' + res.getBody()); 
                 return;
             }
 
             List<Object> invoices = (List<Object>) JSON.deserializeUntyped(res.getBody());
+            System.debug('Invoices received from API: ' + invoices.size());
+
             List<Invoice__c> toUpsert = new List<Invoice__c>();
 
             for(Object o : invoices){
                 Map<String,Object> inv = (Map<String,Object>) o;
+
+                System.debug('Invoice Data: ' + inv);
 
                 Decimal amount;
                 if(inv.get('amount') != null){
@@ -48,7 +71,10 @@ public with sharing class InvoiceSyncService {
             }
 
             if(!toUpsert.isEmpty()){
+                System.debug('Upserting invoices: ' + toUpsert.size());
                 upsert toUpsert External_Id__c;
+            } else {
+                System.debug('No invoices to upsert.');
             }
 
         } catch(Exception e) {

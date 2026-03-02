@@ -1,17 +1,15 @@
 import { LightningElement, wire } from 'lwc';
-import { subscribe, MessageContext } from 'lightning/messageService';
-import SUBSCRIPTION_CHANNEL 
-    from '@salesforce/messageChannel/SubscriptionMessageChannel__c';
+import { subscribe, unsubscribe, MessageContext } from 'lightning/messageService';
+import SUBSCRIPTION_CHANNEL from '@salesforce/messageChannel/SubscriptionMessageChannel__c';
 
-import getInvoices 
-    from '@salesforce/apex/InvoiceController.getInvoices';
-import getTotalPaid 
-    from '@salesforce/apex/InvoiceController.getTotalPaid';
+import getInvoices from '@salesforce/apex/InvoiceController.getInvoices';
+import getTotalPaid from '@salesforce/apex/InvoiceController.getTotalPaid';
+import syncInvoices from '@salesforce/apex/InvoiceController.syncInvoices';
 
 export default class InvoiceViewer extends LightningElement {
 
     invoices;
-    totalPaid;
+    totalPaid = 0;
     error;
     subscriptionId;
     subscription;
@@ -42,28 +40,47 @@ export default class InvoiceViewer extends LightningElement {
 
     handleMessage(message) {
         const subId = message?.subscriptionId;
+        console.log('Message received:', message); 
         if (!subId) return;
 
         this.subscriptionId = subId;
+        console.log('Subscription ID received: ' + this.subscriptionId);
         this.loadInvoices();
     }
 
-    async loadInvoices() {
-        if (!this.subscriptionId) return;
+    
 
-        this.loading = true;
-        this.error = undefined;
+   async loadInvoices() {
+    if (!this.subscriptionId) return;
 
-        try {
-            this.invoices = await getInvoices({ subscriptionId: this.subscriptionId });
-            this.totalPaid = (await getTotalPaid({ subscriptionId: this.subscriptionId })) || 0;     
-           } catch (err) {
-            this.error = err?.body?.message || 'Unknown error';
-            this.invoices = [];
-            this.totalPaid = 0;
-        } finally {
-            this.loading = false;
+    console.log('Loading invoices for subscriptionId: ', this.subscriptionId); 
+
+    this.loading = true;
+    this.error = undefined;
+
+    try {
+        const [invoices, totalPaid] = await Promise.all([
+            syncInvoices({ subscriptionId: this.subscriptionId }),
+            getTotalPaid({ subscriptionId: this.subscriptionId })
+        ]);
+        this.invoices = invoices;
+        this.totalPaid = totalPaid || 0;
+        console.log('Invoices loaded:', this.invoices);  
+    } catch (err) {
+        this.error = this.getErrorMessage(err);
+        this.invoices = [];
+        this.totalPaid = 0;
+        console.error('Error loading invoices:', err);  
+    } finally {
+        this.loading = false;
+    }
+}
+
+    getErrorMessage(err) {
+        if (err && err.body && err.body.message) {
+            return err.body.message;
         }
+        return 'An unknown error occurred';
     }
 
     get hasInvoices() {
@@ -71,6 +88,9 @@ export default class InvoiceViewer extends LightningElement {
     }
 
     disconnectedCallback() {
-        this.subscription = null;
+        if (this.subscription) {
+            unsubscribe(this.subscription);
+            this.subscription = null;
+        }
     }
 }

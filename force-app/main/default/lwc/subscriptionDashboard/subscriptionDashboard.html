@@ -2,16 +2,17 @@
     <lightning-card title="Subscriptions Dashboard" icon-name="standard:entitlement">
 
         <template if:true={isLoading}>
-            <lightning-spinner alternative-text="Loading"></lightning-spinner>
-        </template>
+    <lightning-spinner alternative-text="Loading"></lightning-spinner>
+</template>
 
-        <template if:true={error}>
+         
+
+        <template if:false={isLoading}>
+             <template if:true={error}>
             <div class="slds-text-color_error slds-p-around_small">
                 {error}
             </div>
-        </template>        
-
-        <template if:false={isLoading}>
+        </template>      
 
             <template if:true={hasSubscriptions}>
                 <div class="slds-p-around_medium">

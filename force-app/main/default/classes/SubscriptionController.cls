@@ -4,9 +4,9 @@ public with sharing class SubscriptionController {
     public static List<Subscription__c> getSubscriptions(Id accountId) {
 
     
-        if (!Schema.sObjectType.Subscription__c.isAccessible()) {
-            throw new AuraHandledException('Access denied to Subscription');
-        }
+        // if (!Schema.sObjectType.Subscription__c.isAccessible()) {
+        //     throw new AuraHandledException('Access denied to Subscription');
+        // }
 
         return [
             SELECT Id, Name, Status__c, Monthly_Amount__c
@@ -17,11 +17,8 @@ public with sharing class SubscriptionController {
         ];
     }
 
-    @AuraEnabled(cacheable=true)
+   @AuraEnabled(cacheable=true)
     public static Decimal getTotalMRR(Id accountId) {
-
-       
-
         if (!Schema.sObjectType.Subscription__c.isAccessible()) {
             throw new AuraHandledException('Access denied to Subscription');
         }
@@ -37,4 +34,6 @@ public with sharing class SubscriptionController {
         Decimal total = (Decimal) result.get('total');
         return total != null ? total : 0;
     }
+    
+    
 }
